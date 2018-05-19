@@ -58,7 +58,7 @@ def scrap_results(series, l, h):
 
         writer.writerow(fieldnames)
 
-        for sid in range(l, h):
+        for sid in range(l, h + 1):
 
             sid = str(sid)
 
@@ -67,8 +67,15 @@ def scrap_results(series, l, h):
 
             url = URL.format(series + sid[0:2], sid[2:4], series + sid)
 
-            # should check for error in request.urlopen
-            soup = BeautifulSoup(request.urlopen(url).read(), 'html.parser')
+            try:
+                html_data = request.urlopen(url).read()
+            except request.HTTPError as e:
+                print(e)
+                log.error("[!] Student Id: {}, Error: {}".format(sid, e))
+                continue
+
+            # parse the html data
+            soup = BeautifulSoup(html_data, 'html.parser')
 
             tables = soup.find_all('table')
 
@@ -80,17 +87,28 @@ def scrap_results(series, l, h):
             # Above opeartion will return list of list of string. So convert it into list of string
             data = [d[0] for d in temp]
 
+            # find the string containing marks
+            marks = [d for d in data if 'Total Marks'.lower() in d.lower()][1]
+
+            # index of first digit in marks substring
+            ifd = re.search('\d', marks).start()
+
+            if ('--' in data[1]):
+                percentile = '--'
+            else:
+                percentile = data[1][-5:]
+
             # Just hard coding it to obtain the respective fields
             # Note that this works becuase the fields are static.
             writer.writerow([data[0][9:16],
                             data[0][22:],
                             data[1][8],
-                            data[1][-2:],
+                            percentile,
                             data[2][21:23],
                             data[2][-3:-1],
                             data[3][9:],
-                            data[13][11:14],
-                            data[13][14:17]])
+                            marks[ifd: ifd + 3],
+                            marks[ifd + 3: ifd + 6]])
 
             # slow down a bit
             sleep(0.005)
@@ -112,8 +130,8 @@ def scrap_results(series, l, h):
 if __name__ == '__main__':
 
     series = 'B'
-    low = 100001
-    high = 100010
+    low = 100555 #100001
+    high = 100575 #100010
     step = 10000
 
     for i in range(low, high, step):
