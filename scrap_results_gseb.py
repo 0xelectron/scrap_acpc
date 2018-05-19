@@ -40,20 +40,38 @@ def scrap_results(series, l, h):
     assert(len(series) == 1)
 
     try:
-        FILENAME = "{}-{}.csv".format(l, h)
+        FILENAME = "{}-{}-{}.csv".format(series, l, h)
 
         log.info("open: {}".format(FILENAME))
 
         file = open(FILENAME, 'w')
-        fieldnames = [  'Seat No',
-                        'Name',
-                        'Group',
-                        'Percentile',
-                        'Science Percentile',
-                        'Theory Percentile',
-                        'Result',
-                        'Total Marks',
-                        'Total Obtained Marks']
+
+        if series == 'B':
+            fieldnames = [
+                'Seat No',
+                'Name',
+                'Group',
+                'Percentile',
+                'Science Percentile',
+                'Theory Percentile',
+                'Result',
+                'Total Marks',
+                'Total Obtained Marks'
+            ]
+        elif series == 'E':
+            fieldnames = [
+                'Seat No',
+                'Name',
+                'Group',
+                'Total Obtained Marks',
+                'Total Marks',
+                'Percentile Rank'
+            ]
+        else:
+            log.error("[!] Invalid Series.")
+            print("[!] Invalid Series")
+            sys.exit(0)
+
         writer = csv.writer(file)
 
         writer.writerow(fieldnames)
@@ -87,34 +105,51 @@ def scrap_results(series, l, h):
             # Above opeartion will return list of list of string. So convert it into list of string
             data = [d[0] for d in temp]
 
-            # find the string containing marks
-            marks = [d for d in data if 'Total Marks'.lower() in d.lower()][1]
+            if series == 'B':
+                # find the string containing marks
+                marks = [d for d in data if 'Total Marks'.lower() in d.lower()][1]
 
-            # index of first digit in marks substring
-            ifd = re.search('\d', marks).start()
+                # index of first digit in marks substring
+                ifd = re.search('\d', marks).start()
 
-            if ('--' in data[1]):
-                percentile = '--'
+                if ('--' in data[1]):
+                    percentile = '--'
+                else:
+                    percentile = data[1][-5:]
+
+                # Just hard coding it to obtain the respective fields
+                # Note that this works becuase the fields are static.
+                writer.writerow([data[0][9:16],
+                                data[0][22:],
+                                data[1][8],
+                                percentile,
+                                data[2][21:23],
+                                data[2][-3:-1],
+                                data[3][9:],
+                                marks[ifd: ifd + 3],
+                                marks[ifd + 3: ifd + 6]])
+            elif series == 'E':
+
+                writer.writerow([
+                    data[0][-7:],
+                    data[1],
+                    data[2][-1],
+                    data[6][-6:],
+                    data[7][-6:],
+                    data[8][-6:]
+                ])
+
             else:
-                percentile = data[1][-5:]
-
-            # Just hard coding it to obtain the respective fields
-            # Note that this works becuase the fields are static.
-            writer.writerow([data[0][9:16],
-                            data[0][22:],
-                            data[1][8],
-                            percentile,
-                            data[2][21:23],
-                            data[2][-3:-1],
-                            data[3][9:],
-                            marks[ifd: ifd + 3],
-                            marks[ifd + 3: ifd + 6]])
+                log.error("[!] Invalid Series.")
+                print("[!] Invalid Series")
+                sys.exit(0)
 
             # slow down a bit
             sleep(0.005)
 
     except KeyboardInterrupt:
         log.info("Keyboard Interrupt.")
+        print("Keyboard Interrupt")
         sys.exit(0)
 
     except Exception as e:
@@ -129,9 +164,9 @@ def scrap_results(series, l, h):
 
 if __name__ == '__main__':
 
-    series = 'B'
-    low = 100555 #100001
-    high = 100575 #100010
+    series = 'E'
+    low = 100001
+    high = 100010
     step = 10000
 
     for i in range(low, high, step):
@@ -144,6 +179,6 @@ if __name__ == '__main__':
             h = i + step
 
         log.info("-------------------------------\n")
-        log.info("l = {}\nh = {}\n".format(l, h))
+        log.info("Series = {}\nl = {}\nh = {}\n".format(series, l, h))
         scrap_results(series, l, h)
 
