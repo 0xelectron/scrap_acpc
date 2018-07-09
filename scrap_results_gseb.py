@@ -164,9 +164,9 @@ def scrap_results(series, l, h):
 
 if __name__ == '__main__':
 
-    series = 'E'
-    low = 100001
-    high = 100010
+    series = 'B'
+    low = 222813
+    high = 234672
     step = 10000
 
     for i in range(low, high, step):
